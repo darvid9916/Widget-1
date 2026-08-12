@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Daniels demo</title>
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+
+  <div class="panel">
+    <header class="panel-header">
+      <h1>Daniels demo</h1>
+      <div class="status-row">
+        <div class="dot" id="statusDot"></div>
+        <span id="statusText">Ansluter…</span>
+      </div>
+    </header>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-label">Antal väggar</div>
+        <div class="card-value" id="wallCount">–</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Antal väggar med typeId</div>
+        <div class="card-value" id="wallTypeIdCount">–</div>
+      </div>
+    </div>
+
+    <button id="btnRun">Hämta från modellen</button>
+
+    <section class="selected-object" id="selectedObject" hidden>
+      <div class="selected-label">Valt objekt i 3D</div>
+    </section>
+
+    <h2>Logg</h2>
+    <div id="log"></div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
