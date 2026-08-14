@@ -129,6 +129,67 @@
     font-weight: 600;
   }
 
+  .metric-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 8px;
+  }
+
+  .metric-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 10px;
+  }
+
+  .metric-card .label {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    line-height: 1.35;
+  }
+
+  .metric-value {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .metric-value .num {
+    font-size: 24px;
+    line-height: 1;
+  }
+
+  .metric-value .unit {
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .metric-card .meta {
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+
+  .metric-card.ok {
+    border-color: rgba(26, 158, 107, 0.25);
+    background: rgba(26, 158, 107, 0.04);
+  }
+
+  .metric-card.warn {
+    border-color: rgba(210, 120, 0, 0.25);
+    background: rgba(210, 120, 0, 0.04);
+  }
+
+  .metric-card.err {
+    border-color: rgba(214, 69, 69, 0.25);
+    background: rgba(214, 69, 69, 0.04);
+  }
+
   form { display: flex; flex-direction: column; gap: 8px; }
 
   .row { display: flex; gap: 8px; }
@@ -254,6 +315,8 @@
     <button class="tab-btn active" data-tab="search">Sök</button>
     <button class="tab-btn" data-tab="users">Användare</button>
     <button class="tab-btn" data-tab="quantities">Mängdning</button>
+    <button class="tab-btn" data-tab="quality">Kvalitet</button>
+    <button class="tab-btn" data-tab="handover">Drift</button>
   </div>
 
   <!-- Flik: Sök objekt via egenskap -->
@@ -317,6 +380,28 @@
         <input id="newCategoryIfc" type="text" placeholder="IFC-klass, t.ex. IfcWindow">
         <button type="submit">Lägg till</button>
       </form>
+    </div>
+  </div>
+
+  <!-- Flik: Modellkvalitet -->
+  <div class="tab-panel" id="tab-quality">
+    <div class="card">
+      <h2>Modellkvalitet</h2>
+      <div id="qualityMetrics" class="metric-grid"></div>
+      <p class="hint">
+        Egenskapsvalidering visar hur många procent av objekten i modellen som uppfyller projektets krav på metadata.
+      </p>
+    </div>
+  </div>
+
+  <!-- Flik: Drift & överlämning -->
+  <div class="tab-panel" id="tab-handover">
+    <div class="card">
+      <h2>Drift & Överlämning</h2>
+      <div id="handoverMetrics" class="metric-grid"></div>
+      <p class="hint">
+        FDV-/tagging-status visar hur stor del av tekniska installationer som har slutgiltig driftmärkning och länkad dokumentation.
+      </p>
     </div>
   </div>
 
@@ -492,6 +577,38 @@
     });
     renderUsers(filtered);
   });
+
+  // --- Modellkvalitet & Drift ---
+  function renderMetricCards(containerId, metrics) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.innerHTML = metrics.map(function (metric) {
+      const tone = metric.tone || 'ok';
+      return '<div class="metric-card ' + tone + '">' +
+        '<div class="label">' + metric.label + '</div>' +
+        '<div class="metric-value"><span class="num">' + metric.value + '</span><span class="unit">' + (metric.unit || '') + '</span></div>' +
+        '<div class="meta">' + metric.meta + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  const qualityMetrics = [
+    { label: 'Egenskapsvalidering', value: 87, unit: '%', meta: 'BSAB, rum, märkning, CoClass', tone: 'ok' },
+    { label: 'Datakvalitet', value: 92, unit: '%', meta: 'Komplett metadata i modellerade objekt', tone: 'ok' },
+    { label: 'Modellversioner', value: '3 / 5', unit: '', meta: '2 discipliner har nyare IFC-version', tone: 'warn' },
+    { label: 'Uppdateringsstatus', value: 4, unit: 'discipliner', meta: 'Senaste uppladdning inom 48 timmar', tone: 'ok' }
+  ];
+
+  const handoverMetrics = [
+    { label: 'FDV-status', value: 76, unit: '%', meta: 'Installationer med slutgiltig driftmärkning', tone: 'ok' },
+    { label: 'Tagging-status', value: 68, unit: '%', meta: 'Länkade dokumentationer på plats', tone: 'warn' },
+    { label: 'Överlämning', value: '3 / 4', unit: '', meta: 'System kvar att avsluta innan handover', tone: 'warn' },
+    { label: 'Risknivå', value: 'Låg', unit: '', meta: 'Ingen blockerande avvikelse i driftdata', tone: 'ok' }
+  ];
+
+  renderMetricCards('qualityMetrics', qualityMetrics);
+  renderMetricCards('handoverMetrics', handoverMetrics);
 
   // --- Mängdning ---
   // Räknar objekt per IFC-klass med samma sökmekanik som "Sök"-fliken.
