@@ -363,7 +363,7 @@
         }
       };
 
-      await StreamBIM.connectToParent(window, callbacks);
+      await StreamBIM.connectToParent(window.parent, callbacks);
       setStatus('connected', 'Ansluten');
 
     } catch (err) {
