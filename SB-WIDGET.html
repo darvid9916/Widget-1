@@ -1,716 +1,498 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="sv">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Widget 1</title>
-
-<!--
-  StreamBIM Widget API
-  ---------------------
-  StreamBIM rekommenderar INTE ett publikt CDN för detta skript – ladda hem
-  filen från https://github.com/streambim/streambim-widget-api (mappen /dist)
-  och lägg den bredvid denna html-fil, eller peka på er egen hostade kopia.
--->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>StreamBIM BIM Control Center</title>
 <script src="streambim-widget-api.min.js"></script>
-
 <style>
-  :root {
-    --bg: #f7f8fa;
-    --card: #ffffff;
-    --border: #e4e7ec;
-    --text: #1a1d23;
-    --muted: #6b7280;
-    --accent: #2f6fed;
-    --accent-soft: #eaf1ff;
-    --ok: #1a9e6b;
-    --err: #d64545;
-    --radius: 10px;
-  }
-
-  * { box-sizing: border-box; }
-
-  body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    font-size: 14px;
-  }
-
-  .widget {
-    max-width: 480px;
-    margin: 0 auto;
-    padding: 20px;
-  }
-
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 16px;
-  }
-
-  header h1 {
-    font-size: 16px;
-    font-weight: 600;
-    margin: 0;
-  }
-
-  .status {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    color: var(--muted);
-    padding: 4px 10px;
-    border-radius: 999px;
-    background: var(--card);
-    border: 1px solid var(--border);
-  }
-
-  .status .dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--muted);
-  }
-
-  .status.connected .dot { background: var(--ok); }
-  .status.connected { color: var(--ok); }
-  .status.error .dot { background: var(--err); }
-  .status.error { color: var(--err); }
-
-  /* Flikar */
-  .tabs {
-    display: flex;
-    gap: 4px;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 4px;
-    margin-bottom: 12px;
-  }
-
-  .tab-btn {
-    flex: 1;
-    padding: 8px 0;
-    border: none;
-    border-radius: 7px;
-    background: transparent;
-    color: var(--muted);
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-  }
-
-  .tab-btn.active {
-    background: var(--accent-soft);
-    color: var(--accent);
-  }
-
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
-
-  .card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px;
-    margin-bottom: 12px;
-  }
-
-  .card h2 {
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--muted);
-    margin: 0 0 12px 0;
-    font-weight: 600;
-  }
-
-  .metric-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-    margin-top: 8px;
-  }
-
-  .metric-card {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px 10px;
-  }
-
-  .metric-card .label {
-    font-size: 11px;
-    color: var(--muted);
-    margin-bottom: 8px;
-    line-height: 1.35;
-  }
-
-  .metric-value {
-    display: flex;
-    align-items: baseline;
-    gap: 4px;
-    font-weight: 700;
-    color: var(--text);
-  }
-
-  .metric-value .num {
-    font-size: 24px;
-    line-height: 1;
-  }
-
-  .metric-value .unit {
-    font-size: 12px;
-    color: var(--muted);
-  }
-
-  .metric-card .meta {
-    margin-top: 8px;
-    font-size: 11px;
-    color: var(--muted);
-    line-height: 1.45;
-  }
-
-  .metric-card.ok {
-    border-color: rgba(26, 158, 107, 0.25);
-    background: rgba(26, 158, 107, 0.04);
-  }
-
-  .metric-card.warn {
-    border-color: rgba(210, 120, 0, 0.25);
-    background: rgba(210, 120, 0, 0.04);
-  }
-
-  .metric-card.err {
-    border-color: rgba(214, 69, 69, 0.25);
-    background: rgba(214, 69, 69, 0.04);
-  }
-
-  form { display: flex; flex-direction: column; gap: 8px; }
-
-  .row { display: flex; gap: 8px; }
-
-  input {
-    flex: 1;
-    padding: 9px 10px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    font-size: 13px;
-    font-family: inherit;
-    background: var(--bg);
-  }
-
-  input:focus {
-    outline: none;
-    border-color: var(--accent);
-    background: #fff;
-  }
-
-  button {
-    padding: 9px 14px;
-    border: none;
-    border-radius: 8px;
-    background: var(--accent);
-    color: #fff;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-  }
-
-  button:hover { opacity: 0.9; }
-  button:disabled { opacity: 0.5; cursor: not-allowed; }
-
-  button.secondary {
-    background: var(--accent-soft);
-    color: var(--accent);
-  }
-
-  ul.list {
-    list-style: none;
-    margin: 10px 0 0 0;
-    padding: 0;
-    max-height: 260px;
-    overflow-y: auto;
-  }
-
-  ul.list li {
-    padding: 8px 10px;
-    border-radius: 8px;
-    font-size: 13px;
-    cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 8px;
-  }
-
-  ul.list li:hover { background: var(--accent-soft); }
-
-  ul.list li.connected {
-    background: var(--accent-soft);
-    color: var(--accent);
-    font-weight: 500;
-  }
-
-  ul.list li .name {
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  ul.list li .name .email {
-    font-size: 11px;
-    color: var(--muted);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  ul.list li .badge {
-    font-size: 11px;
-    padding: 3px 8px;
-    border-radius: 999px;
-    background: var(--border);
-    color: var(--muted);
-    flex-shrink: 0;
-  }
-
-  ul.list li.connected .badge {
-    background: var(--accent);
-    color: #fff;
-  }
-
-  .empty {
-    color: var(--muted);
-    font-size: 12px;
-    text-align: center;
-    padding: 10px 0;
-  }
-
-  .hint {
-    font-size: 11px;
-    color: var(--muted);
-    margin-top: 8px;
-    line-height: 1.4;
-  }
+:root{
+  --bg:#f5f7fa;--card:#fff;--border:#e1e6ed;--text:#17202a;--muted:#667085;
+  --accent:#2563eb;--accent-soft:#eaf1ff;--ok:#16845b;--warn:#b7791f;--err:#c53030;
+  --shadow:0 1px 2px rgba(16,24,40,.04);--r:10px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:13px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+button,input,select{font:inherit}
+button{border:0;border-radius:8px;padding:8px 11px;cursor:pointer;background:var(--accent);color:#fff;font-weight:600}
+button.secondary{background:#eef2f6;color:#344054}
+button.ghost{background:transparent;color:var(--accent)}
+button.danger{background:#fff1f1;color:var(--err)}
+button:disabled{opacity:.5;cursor:not-allowed}
+input,select{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);outline:none}
+input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.08)}
+.app{max-width:760px;margin:0 auto;padding:14px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.brand{display:flex;gap:10px;align-items:center}
+.logo{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;background:var(--accent);color:#fff;font-weight:800}
+h1{font-size:15px;margin:0}.sub{color:var(--muted);font-size:11px}
+.status{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);background:#fff;border-radius:999px;padding:5px 9px;color:var(--muted);white-space:nowrap}
+.status .dot{width:7px;height:7px;border-radius:50%;background:#98a2b3}
+.status.ok{color:var(--ok)}.status.ok .dot{background:var(--ok)}
+.status.err{color:var(--err)}.status.err .dot{background:var(--err)}
+.tabs{display:flex;gap:3px;overflow:auto;background:#fff;border:1px solid var(--border);padding:4px;border-radius:10px;margin-bottom:10px}
+.tab{flex:1;min-width:88px;background:transparent;color:var(--muted);padding:8px 7px}
+.tab.active{background:var(--accent-soft);color:var(--accent)}
+.panel{display:none}.panel.active{display:block}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:13px;margin-bottom:10px;box-shadow:var(--shadow)}
+.card h2{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 10px}
+.row{display:grid;grid-template-columns:1fr auto;gap:7px}.row3{display:grid;grid-template-columns:1fr 1fr auto;gap:7px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.kpi{border:1px solid var(--border);background:#fafbfc;border-radius:9px;padding:10px}.kpi b{display:block;font-size:20px;line-height:1.05}.kpi span{font-size:11px;color:var(--muted)}
+.list{list-style:none;padding:0;margin:8px 0 0;max-height:310px;overflow:auto}
+.item{display:flex;justify-content:space-between;gap:8px;padding:9px;border-radius:8px;cursor:pointer}
+.item:hover{background:var(--accent-soft)}
+.item .main{min-width:0}.item .title{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .meta{color:var(--muted);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.badge{flex:none;border-radius:999px;padding:3px 7px;font-size:10px;background:#eef2f6;color:#667085}
+.empty{color:var(--muted);padding:12px;text-align:center}
+.toolbar{display:flex;gap:6px;flex-wrap:wrap}
+.section-note{font-size:11px;color:var(--muted);margin-top:8px}
+.props{display:grid;grid-template-columns:1fr 1.4fr;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.props div{padding:7px 8px;border-bottom:1px solid var(--border);word-break:break-word}
+.props div:nth-child(4n+1),.props div:nth-child(4n+2){background:#fafbfc}
+.props div:nth-last-child(-n+2){border-bottom:0}
+.prop-key{color:var(--muted);font-size:11px}
+.small{font-size:11px;color:var(--muted)}
+hr{border:0;border-top:1px solid var(--border);margin:11px 0}
+label{display:block;font-size:11px;font-weight:600;color:#475467;margin:0 0 4px}
+.field{min-width:0}
+.spin{animation:spin .9s linear infinite;display:inline-block}@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:#101828;color:#fff;padding:8px 12px;border-radius:8px;font-size:12px;opacity:0;pointer-events:none;transition:.2s;z-index:9}
+.toast.show{opacity:1}
+@media(max-width:520px){.row3{grid-template-columns:1fr}.grid{grid-template-columns:1fr 1fr}.app{padding:9px}.tab{min-width:82px}}
 </style>
 </head>
 <body>
-
-<div class="widget">
-
-  <header>
-    <h1>Widget 1</h1>
-    <span id="statusBadge" class="status">
-      <span class="dot"></span>
-      <span id="statusText">Ansluter…</span>
-    </span>
-  </header>
+<div class="app">
+  <div class="top">
+    <div class="brand">
+      <div class="logo">BIM</div>
+      <div><h1>BIM Control Center</h1><div class="sub" id="projectLabel">Ansluter till projekt…</div></div>
+    </div>
+    <div id="status" class="status"><span class="dot"></span><span id="statusText">Ansluter…</span></div>
+  </div>
 
   <div class="tabs">
-    <button class="tab-btn active" data-tab="search">Sök</button>
-    <button class="tab-btn" data-tab="users">Användare</button>
-    <button class="tab-btn" data-tab="quantities">Mängdning</button>
-    <button class="tab-btn" data-tab="quality">Kvalitet</button>
-    <button class="tab-btn" data-tab="handover">Drift</button>
+    <button class="tab active" data-tab="dashboard">Översikt</button>
+    <button class="tab" data-tab="search">Sök</button>
+    <button class="tab" data-tab="object">Objekt</button>
+    <button class="tab" data-tab="quality">Kvalitet</button>
+    <button class="tab" data-tab="tools">Verktyg</button>
   </div>
 
-  <!-- Flik: Sök objekt via egenskap -->
-  <div class="tab-panel active" id="tab-search">
+  <section class="panel active" id="panel-dashboard">
     <div class="card">
-      <h2>Sök objekt</h2>
-      <form id="searchForm">
-        <div class="row">
-          <input id="propKey" type="text" placeholder="Egenskap, t.ex. Name" required>
-          <input id="propValue" type="text" placeholder="Värde" required>
-        </div>
-        <button type="submit">Sök</button>
-      </form>
-
-      <ul class="list" id="results">
-        <li class="empty">Inga sökresultat än</li>
-      </ul>
-
-      <p class="hint">Klick på en träff markerar och zoomar till objektet i StreamBIM.</p>
-    </div>
-  </div>
-
-  <!-- Flik: Användare i projektet -->
-  <div class="tab-panel" id="tab-users">
-    <div class="card">
-      <h2>Användare i projektet</h2>
-
-      <div class="row">
-        <input id="userFilter" type="text" placeholder="Filtrera på namn eller e-post">
-        <button type="button" id="refreshUsers" class="secondary">Uppdatera</button>
+      <h2>Aktuell modellkontext</h2>
+      <div class="grid">
+        <div class="kpi"><b id="floorKpi">–</b><span>Våningsplan</span></div>
+        <div class="kpi"><b id="spaceKpi">–</b><span>Aktiva rum</span></div>
+        <div class="kpi"><b id="searchKpi">0</b><span>Objekt i aktiv sökning</span></div>
+        <div class="kpi"><b id="selectedKpi">0</b><span>Senast valt objekt</span></div>
       </div>
-
-      <ul class="list" id="userList">
-        <li class="empty">Laddar användare…</li>
-      </ul>
-
-      <p class="hint">
-        Klicka på en användare för att koppla/avkoppla den i widgeten.
-        Kopplade användare markeras med en blå bock.
-      </p>
     </div>
-  </div>
 
-  <!-- Flik: Mängdning – antal objekt per kategori -->
-  <div class="tab-panel" id="tab-quantities">
+    <div class="card">
+      <h2>Snabbkontroller</h2>
+      <div class="toolbar">
+        <button id="homeBtn">Hem</button>
+        <button class="secondary" id="clearSearchBtn">Rensa sökning</button>
+        <button class="secondary" id="showAllBtn">Visa allt</button>
+        <button class="secondary" id="screenshotBtn">Skärmbild</button>
+      </div>
+      <div class="section-note">Widgeten håller 3D-vyn och data i StreamBIM synkade i stället för att rendera en separat viewer.</div>
+    </div>
+
+    <div class="card">
+      <h2>Vanliga BIM-sökningar</h2>
+      <div class="grid">
+        <button class="secondary preset" data-key="@kind" data-value="Door">Dörrar</button>
+        <button class="secondary preset" data-key="@kind" data-value="Window">Fönster</button>
+        <button class="secondary preset" data-key="@kind" data-value="Wall">Väggar</button>
+        <button class="secondary preset" data-key="@kind" data-value="Space">Rum</button>
+      </div>
+      <div class="section-note">Klasserna följer StreamBims sökmodell. Om projektet använder andra klassvärden kan de sökas manuellt under Sök.</div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-search">
+    <div class="card">
+      <h2>Objektsökning</h2>
+      <form id="searchForm">
+        <div class="row3">
+          <div class="field"><label for="searchKey">Egenskap</label><input id="searchKey" value="Name" placeholder="t.ex. Name eller System Global Id"></div>
+          <div class="field"><label for="searchValue">Värde</label><input id="searchValue" placeholder="t.ex. Dörr 101"></div>
+          <div class="field"><label>&nbsp;</label><button type="submit">Sök</button></div>
+        </div>
+      </form>
+      <div class="section-note">Klicka på en träff för att markera och zooma till objektet. Sökningen kan också bli aktiv urvalsmängd i 3D-vyn.</div>
+      <div id="searchMeta" class="small"></div>
+      <ul class="list" id="searchResults"><li class="empty">Ingen sökning ännu.</li></ul>
+    </div>
+
     <div class="card">
       <h2>Mängdning</h2>
-
-      <ul class="list" id="quantityList">
-        <li class="empty">Laddar mängder…</li>
-      </ul>
-
-      <button type="button" id="refreshQuantities" class="secondary" style="margin-top:8px;">Uppdatera</button>
-
-      <p class="hint">
-        Klicka på en rad för att visa och zooma till samtliga objekt av den typen i StreamBIM.
-      </p>
-
-      <form id="addCategoryForm" class="row" style="margin-top:12px;">
-        <input id="newCategoryLabel" type="text" placeholder="Namn, t.ex. Fönster">
-        <input id="newCategoryIfc" type="text" placeholder="IFC-klass, t.ex. IfcWindow">
-        <button type="submit">Lägg till</button>
-      </form>
+      <div class="row3">
+        <div><label for="kindInput">IFC-klass / kind</label><input id="kindInput" value="Door"></div>
+        <div><label for="kindLimit">Max</label><input id="kindLimit" type="number" min="1" max="5000" value="500"></div>
+        <div><label>&nbsp;</label><button id="countBtn">Räkna</button></div>
+      </div>
+      <div class="grid" style="margin-top:8px">
+        <div class="kpi"><b id="countValue">–</b><span>Antal träffar</span></div>
+        <div class="kpi"><b id="countKind">–</b><span>Senast räknad klass</span></div>
+      </div>
     </div>
-  </div>
+  </section>
 
-  <!-- Flik: Modellkvalitet -->
-  <div class="tab-panel" id="tab-quality">
+  <section class="panel" id="panel-object">
     <div class="card">
-      <h2>Modellkvalitet</h2>
-      <div id="qualityMetrics" class="metric-grid"></div>
-      <p class="hint">
-        Egenskapsvalidering visar hur många procent av objekten i modellen som uppfyller projektets krav på metadata.
-      </p>
+      <h2>Senast markerat objekt</h2>
+      <div id="objectSummary" class="empty">Klicka på ett objekt i StreamBIM.</div>
+      <hr>
+      <div class="toolbar">
+        <button id="gotoObjectBtn" disabled>Zooma</button>
+        <button class="secondary" id="systemBtn" disabled>Visa system</button>
+        <button class="secondary" id="floorBtn" disabled>Visa våningsplan</button>
+        <button class="secondary" id="copyGuidBtn" disabled>Kopiera GUID</button>
+      </div>
     </div>
-  </div>
-
-  <!-- Flik: Drift & överlämning -->
-  <div class="tab-panel" id="tab-handover">
     <div class="card">
-      <h2>Drift & Överlämning</h2>
-      <div id="handoverMetrics" class="metric-grid"></div>
-      <p class="hint">
-        FDV-/tagging-status visar hur stor del av tekniska installationer som har slutgiltig driftmärkning och länkad dokumentation.
-      </p>
+      <h2>Egenskaper</h2>
+      <div id="objectProps" class="empty">Inga egenskaper laddade.</div>
     </div>
-  </div>
+  </section>
 
+  <section class="panel" id="panel-quality">
+    <div class="card">
+      <h2>Datakvalitet på aktiv sökning</h2>
+      <div class="row3">
+        <div style="grid-column:span 2">
+          <label for="requiredProps">Obligatoriska egenskaper</label>
+          <input id="requiredProps" value="Name,Tag,System Global Id">
+        </div>
+        <div><label>&nbsp;</label><button id="qualityBtn">Kontrollera</button></div>
+      </div>
+      <div class="grid" style="margin-top:8px">
+        <div class="kpi"><b id="qualityPct">–</b><span>Kompletthet</span></div>
+        <div class="kpi"><b id="qualityObjects">–</b><span>Kontrollerade objekt</span></div>
+      </div>
+      <div id="qualityDetails" class="section-note">Kör kontroll efter att du skapat en sökning.</div>
+    </div>
+    <div class="card">
+      <h2>Snabbanalys av markerat objekt</h2>
+      <div id="objectQuality" class="small">Välj ett objekt för att se vilka av dina obligatoriska fält som saknas.</div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-tools">
+    <div class="card">
+      <h2>Våningsplan</h2>
+      <div class="row"><select id="floorSelect"><option value="">Laddar…</option></select><button class="secondary" id="gotoFloorBtn">Gå</button></div>
+    </div>
+    <div class="card">
+      <h2>Färgkodning</h2>
+      <div class="row3">
+        <div><label for="colorPset">Pset (valfritt)</label><input id="colorPset" placeholder="t.ex. Pset_DoorCommon"></div>
+        <div><label for="colorProp">Property</label><input id="colorProp" placeholder="t.ex. FireRating"></div>
+        <div><label>&nbsp;</label><button id="colorBtn">Färgkoda</button></div>
+      </div>
+      <div class="section-note">StreamBim bestämmer bucketing/färger vid property-baserad färgkodning.</div>
+    </div>
+    <div class="card">
+      <h2>Dokumentation / underlag</h2>
+      <div class="toolbar">
+        <button class="secondary" id="annotatedBtn">Skapa annoterad planvy</button>
+        <button class="secondary" id="mapBtn">Visa karta/översikt</button>
+      </div>
+      <img id="previewImage" alt="" style="display:none;width:100%;margin-top:10px;border:1px solid var(--border);border-radius:8px">
+      <div id="fileNotice" class="section-note"></div>
+    </div>
+  </section>
 </div>
+<div id="toast" class="toast"></div>
 
 <script>
-  // ---------------------------------------------------------------------
-  // Widget 1 – logik
-  // Widgeten körs inuti StreamBIM (iframe) och pratar med huvudfönstret
-  // via streambim-widget-api. Ingen egen 3D-vy renderas här.
-  // ---------------------------------------------------------------------
+(function(){
+  'use strict';
 
-  const statusBadge = document.getElementById('statusBadge');
-  const statusText = document.getElementById('statusText');
+  const $ = id => document.getElementById(id);
+  const state = {
+    connected:false, projectId:null, buildingId:null, floorId:null,
+    spaces:[], floors:[], lastGuid:null, lastInfo:null, activeResults:[]
+  };
 
-  function setStatus(state, text) {
-    statusBadge.className = 'status ' + state;
-    statusText.textContent = text;
+  function toast(text){
+    const el=$('toast'); el.textContent=text; el.classList.add('show');
+    clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove('show'),2200);
+  }
+  function status(kind,text){
+    $('status').className='status '+(kind||'');
+    $('statusText').textContent=text;
+  }
+  function escapeHtml(v){
+    return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+  }
+  function valText(v){
+    if(Array.isArray(v)) return v.map(valText).join(', ');
+    if(v && typeof v==='object') return Object.entries(v).map(([k,x])=>k+': '+valText(x)).join(' | ');
+    return String(v??'');
+  }
+  function propMap(info){
+    return info && info.properties && typeof info.properties==='object' ? info.properties : {};
+  }
+  function firstProp(info,names){
+    const p=propMap(info), wanted=names.map(x=>x.toLowerCase());
+    for(const k of Object.keys(p)){
+      if(wanted.includes(k.toLowerCase())) return valText(p[k]);
+    }
+    return '';
+  }
+  function setKpis(){
+    $('searchKpi').textContent=state.activeResults.length;
+    $('selectedKpi').textContent=state.lastGuid?1:0;
+    $('spaceKpi').textContent=state.spaces.length||0;
+    const f=state.floors.find(x=>String(x.id)===String(state.floorId));
+    $('floorKpi').textContent=f?f.name:(state.floorId??'–');
   }
 
-  // --- Flikhantering ---
-  document.querySelectorAll('.tab-btn').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  async function safe(fn){
+    try{return await fn()}catch(e){console.error(e);throw e}
+  }
 
-      if (btn.dataset.tab === 'users' && !usersLoaded) {
-        loadUsers();
+  async function applySearch(key,value,limit=200){
+    $('searchMeta').textContent='Söker…';
+    $('searchResults').innerHTML='<li class="empty"><span class="spin">◌</span> Söker…</li>';
+    try{
+      const guids=await StreamBIM.API.findObjects({key,value,limit});
+      state.activeResults=Array.isArray(guids)?guids:[];
+      $('searchMeta').textContent=state.activeResults.length+' träffar';
+      renderResults(state.activeResults);
+      setKpis();
+      if(state.activeResults.length){
+        await StreamBIM.API.applyObjectSearch({key,value,limit},true);
       }
-      if (btn.dataset.tab === 'quantities' && !quantitiesLoaded) {
-        loadQuantities();
+      return state.activeResults;
+    }catch(err){
+      state.activeResults=[];
+      $('searchMeta').textContent='';
+      $('searchResults').innerHTML='<li class="empty">Sökningen misslyckades.</li>';
+      throw err;
+    }
+  }
+
+  function renderResults(guids){
+    const list=$('searchResults');
+    if(!guids.length){list.innerHTML='<li class="empty">Inga träffar.</li>';return}
+    list.innerHTML=guids.map((g,i)=>
+      `<li class="item" data-guid="${escapeHtml(g)}">
+        <div class="main"><div class="title">Objekt ${i+1}</div><div class="meta">${escapeHtml(g)}</div></div>
+        <span class="badge">Markera</span>
+      </li>`).join('');
+    list.querySelectorAll('.item').forEach(li=>li.addEventListener('click',()=>selectGuid(li.dataset.guid)));
+  }
+
+  async function selectGuid(guid){
+    state.lastGuid=guid;
+    setKpis();
+    try{
+      await StreamBIM.API.highlightObject(guid);
+      await StreamBIM.API.gotoObject(guid);
+      const info=await StreamBIM.API.getObjectInfo(guid);
+      state.lastInfo=info;
+      renderObject(info,guid);
+      renderObjectQuality();
+      document.querySelector('.tab[data-tab="object"]').click();
+    }catch(err){
+      toast('Kunde inte läsa objektet');
+      console.error(err);
+    }
+  }
+
+  function renderObject(info,guid){
+    const name=firstProp(info,['Name','Long Name','Tag'])||'Namnlöst objekt';
+    const type=firstProp(info,['@kind','Object Type','Type'])||'Okänd typ';
+    $('objectSummary').innerHTML=
+      `<div><strong>${escapeHtml(name)}</strong></div>
+       <div class="small">${escapeHtml(type)}</div>
+       <div class="small">${escapeHtml(guid)}</div>`;
+    $('gotoObjectBtn').disabled=false;
+    $('copyGuidBtn').disabled=false;
+    const system=firstProp(info,['System Global Id','System GlobalID','SystemGUID']);
+    const floor=firstProp(info,['Building Storey','Storey','Level']);
+    $('systemBtn').disabled=!system;
+    $('floorBtn').disabled=!floor;
+
+    const p=propMap(info);
+    const keys=Object.keys(p).sort((a,b)=>a.localeCompare(b));
+    if(!keys.length){$('objectProps').innerHTML='<div class="empty">StreamBIM returnerade inga egenskaper för objektet.</div>';return}
+    const rows=[];
+    for(const k of keys.slice(0,250)){
+      rows.push(`<div class="prop-key">${escapeHtml(k)}</div><div>${escapeHtml(valText(p[k]))}</div>`);
+    }
+    $('objectProps').innerHTML='<div class="props">'+rows.join('')+'</div>';
+  }
+
+  function renderObjectQuality(){
+    const required=$('requiredProps').value.split(',').map(s=>s.trim()).filter(Boolean);
+    if(!state.lastInfo){$('objectQuality').textContent='Välj ett objekt.';return}
+    const missing=required.filter(k=>!firstProp(state.lastInfo,[k]).trim());
+    $('objectQuality').innerHTML=missing.length
+      ? `Saknade fält: <strong>${escapeHtml(missing.join(', '))}</strong>`
+      : 'Alla angivna obligatoriska fält är ifyllda.';
+  }
+
+  async function loadContext(){
+    try{
+      state.projectId=await StreamBIM.API.getProjectId();
+      state.buildingId=await StreamBIM.API.getBuildingId();
+      $('projectLabel').textContent='Projekt '+state.projectId;
+    }catch(e){$('projectLabel').textContent='Projektinformation kunde inte läsas.'}
+    try{
+      state.floors=await StreamBIM.API.getFloors()||[];
+      const sel=$('floorSelect');
+      sel.innerHTML=state.floors.length?state.floors.map(f=>`<option value="${escapeHtml(f.id)}">${escapeHtml(f.name)}</option>`).join(''):'<option value="">Inga plan</option>';
+    }catch(e){}
+    try{state.spaces=await StreamBIM.API.getSpaces()||[]}catch(e){}
+    setKpis();
+  }
+
+  async function qualityCheck(){
+    if(!state.activeResults.length){toast('Skapa först en aktiv sökning.');return}
+    const required=$('requiredProps').value.split(',').map(s=>s.trim()).filter(Boolean);
+    $('qualityDetails').textContent='Kontrollerar '+state.activeResults.length+' objekt…';
+    try{
+      const limit=Math.min(state.activeResults.length,500);
+      const guids=state.activeResults.slice(0,limit);
+      const infos=[];
+      for(let i=0;i<guids.length;i+=20){
+        const chunk=guids.slice(i,i+20);
+        const part=await Promise.all(chunk.map(g=>StreamBIM.API.getObjectInfo(g).catch(()=>null)));
+        infos.push(...part.filter(Boolean));
       }
-    });
+      let total=0,complete=0; const miss={};
+      for(const info of infos){
+        total+=required.length;
+        for(const k of required){
+          if(firstProp(info,[k]).trim()) complete++; else miss[k]=(miss[k]||0)+1;
+        }
+      }
+      const pct=total?Math.round(complete/total*100):0;
+      $('qualityPct').textContent=pct+'%';
+      $('qualityObjects').textContent=infos.length;
+      const worst=Object.entries(miss).sort((a,b)=>b[1]-a[1]).slice(0,5);
+      $('qualityDetails').innerHTML=worst.length
+        ? 'Vanligaste saknade fält: '+worst.map(([k,n])=>`${escapeHtml(k)} (${n})`).join(' · ')
+        : 'Inga saknade fält i kontrollen.';
+    }catch(err){
+      $('qualityDetails').textContent='Kvalitetskontrollen misslyckades.';
+      console.error(err);
+    }
+    renderObjectQuality();
+  }
+
+  document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+    btn.classList.add('active'); $('panel-'+btn.dataset.tab).classList.add('active');
+  }));
+
+  $('searchForm').addEventListener('submit',async e=>{
+    e.preventDefault();
+    const key=$('searchKey').value.trim(), value=$('searchValue').value.trim();
+    if(!key||!value){toast('Fyll i egenskap och värde.');return}
+    try{await applySearch(key,value,200)}catch(e){toast('Sökningen misslyckades')}
   });
 
-  // --- Anslutning ---
-  async function init() {
-    try {
-      const callbacks = {
-        spacesChanged: function (guids) {
-          // T.ex. reagera på rumbyte om ni vill bygga vidare på widgeten
-        }
+  document.querySelectorAll('.preset').forEach(btn=>btn.addEventListener('click',async()=>{
+    $('searchKey').value=btn.dataset.key; $('searchValue').value=btn.dataset.value;
+    document.querySelector('.tab[data-tab="search"]').click();
+    try{await applySearch(btn.dataset.key,btn.dataset.value,500)}catch(e){toast('Klassen kunde inte hittas')}
+  }));
+
+  $('countBtn').addEventListener('click',async()=>{
+    const kind=$('kindInput').value.trim(), limit=Math.min(Math.max(Number($('kindLimit').value)||500,1),5000);
+    if(!kind)return;
+    $('countValue').textContent='…';
+    try{
+      let guids=await StreamBIM.API.findObjects({key:'@kind',value:kind,limit});
+      if(!guids.length && kind.startsWith('Ifc')) guids=await StreamBIM.API.findObjects({key:'@kind',value:kind.slice(3),limit});
+      if(!guids.length && !kind.startsWith('Ifc')) guids=await StreamBIM.API.findObjects({key:'@kind',value:'Ifc'+kind,limit});
+      $('countValue').textContent=guids.length+(guids.length>=limit?'+':'');
+      $('countKind').textContent=kind;
+    }catch(e){$('countValue').textContent='Fel'}
+  });
+
+  $('clearSearchBtn').addEventListener('click',async()=>{try{await StreamBIM.API.resetObjectSearch();state.activeResults=[];renderResults([]);setKpis();$('searchMeta').textContent='';toast('Sökningen rensad')}catch(e){toast('Kunde inte rensa sökning')}});
+  $('showAllBtn').addEventListener('click',async()=>{try{await StreamBIM.API.showAllObjects();toast('Alla objekt visas')}catch(e){}});
+  $('homeBtn').addEventListener('click',async()=>{try{await StreamBIM.API.goHome()}catch(e){}});
+  $('screenshotBtn').addEventListener('click',async()=>{
+    try{
+      const url=await StreamBIM.API.takeScreenshot();
+      $('previewImage').src=url;$('previewImage').style.display='block';document.querySelector('.tab[data-tab="tools"]').click();toast('Skärmbild skapad');
+    }catch(e){toast('Skärmbild kunde inte skapas')}
+  });
+
+  $('gotoObjectBtn').addEventListener('click',()=>state.lastGuid&&StreamBIM.API.gotoObject(state.lastGuid));
+  $('copyGuidBtn').addEventListener('click',async()=>{if(state.lastGuid){try{await navigator.clipboard.writeText(state.lastGuid);toast('GUID kopierat')}catch(e){toast(state.lastGuid)}}});
+  $('systemBtn').addEventListener('click',async()=>{
+    const sys=firstProp(state.lastInfo,['System Global Id','System GlobalID','SystemGUID']);
+    if(!sys)return;
+    try{
+      const ids=await StreamBIM.API.applyObjectSearch({key:'System Global Id',value:sys,limit:500},true);
+      state.activeResults=ids||[];setKpis();await StreamBIM.API.setSearchVisualizationMode('FADED');await StreamBIM.API.zoomToSearchResult();toast('Systemet visas');
+    }catch(e){toast('Systemet kunde inte hittas')}
+  });
+  $('floorBtn').addEventListener('click',async()=>{
+    const floor=firstProp(state.lastInfo,['Building Storey','Storey','Level']);
+    const hit=state.floors.find(f=>String(f.name).toLowerCase()===String(floor).toLowerCase()||String(f.id)===String(floor));
+    if(hit)try{await StreamBIM.API.gotoFloor(hit.id)}catch(e){}
+  });
+  $('qualityBtn').addEventListener('click',qualityCheck);
+  $('requiredProps').addEventListener('input',renderObjectQuality);
+
+  $('gotoFloorBtn').addEventListener('click',async()=>{const v=$('floorSelect').value;if(v)try{await StreamBIM.API.gotoFloor(v)}catch(e){}});
+  $('colorBtn').addEventListener('click',async()=>{
+    const pset=$('colorPset').value.trim(), prop=$('colorProp').value.trim();
+    if(!prop){toast('Ange en property.');return}
+    try{await StreamBIM.API.colorCodeByProperty({pset:pset||undefined,propertyKey:prop});toast('Färgkodning aktiverad')}catch(e){toast('Färgkodning misslyckades')}
+  });
+
+  $('annotatedBtn').addEventListener('click',async()=>{
+    try{
+      const cam=await StreamBIM.API.getCameraState();
+      const pos=cam && cam.position;
+      if(!pos){toast('Kameraposition saknas.');return}
+      const url=await StreamBIM.API.getAnnotatedFloorplan(pos);
+      $('previewImage').src=url;$('previewImage').style.display='block';toast('Annoterad planvy skapad');
+    }catch(e){toast('Kunde inte skapa planvy')}
+  });
+
+  $('mapBtn').addEventListener('click',async()=>{
+    try{
+      const url=await StreamBIM.API.getMapImage({width:1024,height:700,resolution:5});
+      $('previewImage').src=url;$('previewImage').style.display='block';toast('Översiktsbild skapad');
+    }catch(e){toast('Kunde inte skapa översiktsbild')}
+  });
+
+  async function init(){
+    try{
+      const callbacks={
+        pickedObject:async result=>{
+          if(result&&result.guid){await selectGuid(result.guid)}
+        },
+        spacesChanged:guids=>{state.spaces=Array.isArray(guids)?guids:[];setKpis()},
+        floorChanged:id=>{state.floorId=id;setKpis()},
+        cameraChanged:()=>{}
       };
-
-      await StreamBIM.connectToParent(window.parent, callbacks);
-      setStatus('connected', 'Ansluten');
-
-    } catch (err) {
-      console.error('Kunde inte ansluta till StreamBIM:', err);
-      setStatus('error', 'Kunde inte ansluta');
+      await StreamBIM.connectToParent(window,callbacks);
+      state.connected=true;status('ok','Ansluten');await loadContext();
+    }catch(err){
+      console.error(err);status('err','Kunde inte ansluta');$('projectLabel').textContent='Öppna widgeten inne i StreamBIM.';
     }
   }
-
-  // --- Sök objekt ---
-  document.getElementById('searchForm').addEventListener('submit', async function (e) {
-    e.preventDefault();
-
-    const key = document.getElementById('propKey').value.trim();
-    const value = document.getElementById('propValue').value.trim();
-    const list = document.getElementById('results');
-
-    list.innerHTML = '<li class="empty">Söker…</li>';
-
-    try {
-      const guids = await StreamBIM.API.findObjects({ key, value, limit: 50 });
-
-      if (!guids || guids.length === 0) {
-        list.innerHTML = '<li class="empty">Inga träffar</li>';
-        return;
-      }
-
-      list.innerHTML = '';
-      guids.forEach(function (guid) {
-        const li = document.createElement('li');
-        li.textContent = guid;
-        li.addEventListener('click', async function () {
-          await StreamBIM.API.highlightObject(guid);
-          await StreamBIM.API.gotoObject(guid);
-        });
-        list.appendChild(li);
-      });
-
-    } catch (err) {
-      console.error('Sökning misslyckades:', err);
-      list.innerHTML = '<li class="empty">Sökningen misslyckades</li>';
-    }
-  });
-
-  // --- Användare ---
-  // OBS: streambim-widget-api har inte (ännu) en dokumenterad metod för att
-  // lista ALLA användare i ett projekt – bara getUserEmail() för den
-  // inloggade användaren. Anropet nedan går därför via den lågnivåmetoden
-  // makeApiRequest mot projektets backend-endpoint.
-  //
-  // Endpointen "/pgw/project-<ID>/api/v1/users" nedan är en rimlig gissning
-  // utifrån StreamBIM:s övriga /pgw-mönster (se ifc-searches i README:t för
-  // streambim-widget-api), men är INTE bekräftad i officiell dokumentation.
-  // Verifiera/justera den genom att öppna Användare-vyn i StreamBIM och
-  // inspektera nätverksanropen i webbläsarens devtools (Network-fliken) –
-  // det är samma metod StreamBIM själva rekommenderar för ifc-searches.
-
-  let usersLoaded = false;
-  let allUsers = [];
-  const connectedUsers = new Set();
-
-  async function loadUsers() {
-    const list = document.getElementById('userList');
-    list.innerHTML = '<li class="empty">Laddar användare…</li>';
-
-    try {
-      const projectId = await StreamBIM.API.getProjectId();
-
-      const res = await StreamBIM.API.makeApiRequest({
-        url: '/pgw/project-' + projectId + '/api/v1/users',
-        method: 'GET'
-      });
-
-      allUsers = JSON.parse(res).data || JSON.parse(res) || [];
-      usersLoaded = true;
-      renderUsers(allUsers);
-
-    } catch (err) {
-      console.error('Kunde inte hämta användare:', err);
-      list.innerHTML = '<li class="empty">Kunde inte hämta användare – kontrollera endpointen (se kommentar i koden)</li>';
-    }
-  }
-
-  function renderUsers(users) {
-    const list = document.getElementById('userList');
-
-    if (!users || users.length === 0) {
-      list.innerHTML = '<li class="empty">Inga användare hittades</li>';
-      return;
-    }
-
-    list.innerHTML = '';
-    users.forEach(function (user) {
-      const id = user.id || user.email || user.guid;
-      const name = user.name || user.fullName || user.email || 'Okänd användare';
-      const email = user.email || '';
-
-      const li = document.createElement('li');
-      li.className = connectedUsers.has(id) ? 'connected' : '';
-      li.innerHTML =
-        '<span class="name"><span>' + name + '</span>' +
-        (email ? '<span class="email">' + email + '</span>' : '') +
-        '</span>' +
-        '<span class="badge">' + (connectedUsers.has(id) ? 'Kopplad' : 'Koppla') + '</span>';
-
-      li.addEventListener('click', function () {
-        if (connectedUsers.has(id)) {
-          connectedUsers.delete(id);
-        } else {
-          connectedUsers.add(id);
-        }
-        renderUsers(allUsers);
-      });
-
-      list.appendChild(li);
-    });
-  }
-
-  document.getElementById('refreshUsers').addEventListener('click', loadUsers);
-
-  document.getElementById('userFilter').addEventListener('input', function () {
-    const q = this.value.toLowerCase();
-    const filtered = allUsers.filter(function (u) {
-      const name = (u.name || u.fullName || '').toLowerCase();
-      const email = (u.email || '').toLowerCase();
-      return name.includes(q) || email.includes(q);
-    });
-    renderUsers(filtered);
-  });
-
-  // --- Modellkvalitet & Drift ---
-  function renderMetricCards(containerId, metrics) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-
-    container.innerHTML = metrics.map(function (metric) {
-      const tone = metric.tone || 'ok';
-      return '<div class="metric-card ' + tone + '">' +
-        '<div class="label">' + metric.label + '</div>' +
-        '<div class="metric-value"><span class="num">' + metric.value + '</span><span class="unit">' + (metric.unit || '') + '</span></div>' +
-        '<div class="meta">' + metric.meta + '</div>' +
-      '</div>';
-    }).join('');
-  }
-
-  const qualityMetrics = [
-    { label: 'Egenskapsvalidering', value: 87, unit: '%', meta: 'BSAB, rum, märkning, CoClass', tone: 'ok' },
-    { label: 'Datakvalitet', value: 92, unit: '%', meta: 'Komplett metadata i modellerade objekt', tone: 'ok' },
-    { label: 'Modellversioner', value: '3 / 5', unit: '', meta: '2 discipliner har nyare IFC-version', tone: 'warn' },
-    { label: 'Uppdateringsstatus', value: 4, unit: 'discipliner', meta: 'Senaste uppladdning inom 48 timmar', tone: 'ok' }
-  ];
-
-  const handoverMetrics = [
-    { label: 'FDV-status', value: 76, unit: '%', meta: 'Installationer med slutgiltig driftmärkning', tone: 'ok' },
-    { label: 'Tagging-status', value: 68, unit: '%', meta: 'Länkade dokumentationer på plats', tone: 'warn' },
-    { label: 'Överlämning', value: '3 / 4', unit: '', meta: 'System kvar att avsluta innan handover', tone: 'warn' },
-    { label: 'Risknivå', value: 'Låg', unit: '', meta: 'Ingen blockerande avvikelse i driftdata', tone: 'ok' }
-  ];
-
-  renderMetricCards('qualityMetrics', qualityMetrics);
-  renderMetricCards('handoverMetrics', handoverMetrics);
-
-  // --- Mängdning ---
-  // Räknar objekt per IFC-klass med samma sökmekanik som "Sök"-fliken.
-  // Property-nyckeln "@kind" för IFC-klass är hämtad från StreamBIM:s egna
-  // exempel på sökregler (se README för streambim-widget-api, avsnittet om
-  // ifc-searches/export). Om det inte stämmer i er modell: byt värdet i
-  // IFC_KEY nedan, eller kontrollera vilken property-nyckel som faktiskt
-  // används genom att inspektera nätverksanropen (devtools) vid en sökning
-  // i StreamBIM.
-
-  const IFC_KEY = '@kind';
-  const COUNT_LIMIT = 5000; // tak för hur många träffar som räknas per kategori
-
-  let quantitiesLoaded = false;
-  let categories = [
-    { label: 'Dörrar',   ifc: 'IfcDoor' },
-    { label: 'Väggar',   ifc: 'IfcWall' },
-    { label: 'Fönster',  ifc: 'IfcWindow' },
-    { label: 'Bjälklag', ifc: 'IfcSlab' },
-    { label: 'Pelare',   ifc: 'IfcColumn' },
-    { label: 'Balkar',   ifc: 'IfcBeam' },
-    { label: 'Rum',      ifc: 'IfcSpace' },
-    { label: 'Trappor',  ifc: 'IfcStair' },
-    { label: 'Räcken',   ifc: 'IfcRailing' }
-  ];
-
-  async function loadQuantities() {
-    const list = document.getElementById('quantityList');
-    list.innerHTML = '<li class="empty">Laddar mängder…</li>';
-
-    try {
-      const counts = await Promise.all(categories.map(async function (cat) {
-        try {
-          const guids = await StreamBIM.API.findObjects({ key: IFC_KEY, value: cat.ifc, limit: COUNT_LIMIT });
-          return { ...cat, count: guids ? guids.length : 0 };
-        } catch (err) {
-          return { ...cat, count: null };
-        }
-      }));
-
-      quantitiesLoaded = true;
-      renderQuantities(counts);
-
-    } catch (err) {
-      console.error('Kunde inte hämta mängder:', err);
-      list.innerHTML = '<li class="empty">Kunde inte hämta mängder</li>';
-    }
-  }
-
-  function renderQuantities(counts) {
-    const list = document.getElementById('quantityList');
-
-    if (!counts || counts.length === 0) {
-      list.innerHTML = '<li class="empty">Inga kategorier tillagda</li>';
-      return;
-    }
-
-    list.innerHTML = '';
-    counts.forEach(function (cat) {
-      const li = document.createElement('li');
-
-      const countLabel = cat.count === null
-        ? 'Fel'
-        : (cat.count >= COUNT_LIMIT ? COUNT_LIMIT + '+' : cat.count);
-
-      li.innerHTML =
-        '<span class="name"><span>' + cat.label + '</span>' +
-        '<span class="email">' + cat.ifc + '</span></span>' +
-        '<span class="badge">' + countLabel + ' st</span>';
-
-      li.addEventListener('click', async function () {
-        try {
-          await StreamBIM.API.applyObjectSearch({ key: IFC_KEY, value: cat.ifc, limit: COUNT_LIMIT }, true);
-          await StreamBIM.API.zoomToSearchResult();
-        } catch (err) {
-          console.error('Kunde inte visa kategori i vyn:', err);
-        }
-      });
-
-      list.appendChild(li);
-    });
-  }
-
-  document.getElementById('refreshQuantities').addEventListener('click', loadQuantities);
-
-  document.getElementById('addCategoryForm').addEventListener('submit', async function (e) {
-    e.preventDefault();
-
-    const label = document.getElementById('newCategoryLabel').value.trim();
-    const ifc = document.getElementById('newCategoryIfc').value.trim();
-
-    if (!label || !ifc) return;
-
-    categories.push({ label, ifc });
-    document.getElementById('newCategoryLabel').value = '';
-    document.getElementById('newCategoryIfc').value = '';
-
-    loadQuantities();
-  });
 
   init();
+})();
 </script>
-
 </body>
 </html>
